@@ -15,3 +15,8 @@ https://instances.vantage.sh/?cost_duration=monthly
 
 ## Artigo sobre connectividade e DirectConnect
 https://aws.amazon.com/pt/blogs/aws-brasil/descomplicando-rede-e-conectividade-atraves-de-exemplos/
+
+## Well-Architected Security Pillar
+https://docs.aws.amazon.com/wellarchitected/latest/security-pillar/governance.html
+
+

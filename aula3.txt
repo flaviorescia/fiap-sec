@@ -1,0 +1,63 @@
+# No laboratório de hoje vamos criar um Cloudfront para proteger o site LEOPART BIKE, criado na aula2.
+# Garanta que o EC2 da aula passada esteja criada, e respondendo corretamente 
+
+# Para isso é necessário primeiro criar uma distribuição no Cloudfront, para então conectar o WAF nessa distribuição
+
+# Naveguem em 'Services' > 'Cloudfront' > 'Distribution'
+# Preencha os campos abaixo:
+
+    Origin domain: coloque aqui o 'Public IP' ou o 'Public IPv4 DNS' de seu EC2 
+    Protocol: HTTP Only 
+    Name: alunoX.daaula.com.br
+    Cache policy: CachingDisabled 
+    WAF: 'Do not enable security protections'
+
+Clique em 'Create Distribution'
+Aguarde a criação, e copie o nome DNS da distribuição (Domain Name)
+Teste acessando pelo browser http://Y.cloudfront.net (Onde 'Y' é o nome de sua distribuição Cloudfront)
+
+# Agora vamos criar e configurar o WAF
+Navegue em 'Services' > 'WAF'
+
+# Vamos criar um ACL 'Web ACLs'
+    Resource type: 'Global resources (Cloudfront)'
+    Name: alunoX 
+    Associated AWS resources: 'Add AWS Resource'
+    Selecione sua distribução > 'Add'
+    'Next'
+    'Add Rules' > 'Add Managed Rule'
+    'AWS managed rule groups'
+        Selecione: 'PHP application' e 'SQL database'
+        Next ... Next ... 'Create web ACL'
+
+# Agora vamos testar, para isso, basta inserir uma querystring maliciosa com no exemplo abaixo: 
+
+# Primeiro teste inserir um query string qualquer: 
+http://X.cloudfront.net/?q=teste (use a URL de sua distribuição)
+
+
+# Rule PHP (global variables)
+http://X.cloudfront.net/?q=fsockopen;
+
+
+# Rule Database Application (SQL Injection)
+http://X.cloudfront.net/?q='SELECT * FROM table';
+
+
+# A requisição deve ter sido bloqueada!
+
+# Agora vamos testar o CAPTCHA, para evitar bloqueios, mas fazer um teste de "Você é humano"
+Selecione sua ACL > 'Rules' > 'AWS-AWSManagedRulesSQLiRuleSet' > 'Edit'
+Em 'Override all rule actions' selecione 'Override to CAPTCHA' > 'Save rules' > 'Save'
+
+# Agora teste novamente
+http://X.cloudfront.net/?q=fsockopen;
+http://X.cloudfront.net/?q='SELECT * FROM table';
+
+
+Qual comportamento observado e qual o motivo deles? 
+
+
+
+
+
