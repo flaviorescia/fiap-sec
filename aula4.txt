@@ -1,0 +1,129 @@
+# Nesse laboratório vamos fazer testes de criptografia em repouso e em trânsito.
+
+# Para criptografia em repouso usaremos o KMS com chaves gerenciadas pelas AWS e chaves de cliente 
+
+# Siga os passos para criação de um EC2, porém customize a opção abaixo
+    Crie um nova instância, e nas configurações antes de cria-la selecione:
+    'Storage (volumes)' > 'EBS Volumes' > 'Advanced' > clique na seta 'volume 1...'
+    Em 'Encrypted' selecione 'Encrypted'
+    Em 'KMS key' selecione '(default) aws/ebs'
+
+# Essa é chave gerenciada pela própria AWS, e ela é criada automaticamente em todas contas AWS. 
+
+# Agora sim, parta a instância clicando em 
+    'Launch Instance'
+
+# Agora vamos validar se o disco está encriptado
+    Navegue até a instância 
+    Selecione a aba 'Storage'
+    Selecione seu disco clicando nele (seu nome começa com vol-...)
+
+# Note que na sessão 'Encryption', vemos que o disco está 'Encrypted', localize o 'KMS key ID' e o 'KMS key alias
+' está listado como aws/ebs. Esse 'aws' mostra que a chave é gerenciada pela própria AWS. 
+
+# Navegue até o serviço 'KMS', e veja que a chave aws/ebs foi automaticamente criada 
+
+# Agora  vamos usar uma chave CMK (Customer Managed Key), ou chave gerenciada pelo cliente (nós)
+    Clique em 'Customer managed keys'
+    Selecione 'Create Key'
+    Habilite a opção 'Multi-Region key' para que essa chave seja replicada em todas as regiões 
+    Clique em 'Next'
+    Em 'Alias' coloque alunoX (onde X é o seu número de aluno)
+    Em 'Key Administrator' selecione seu usuário (esse usuário poderá alterar, delete e compartilhar a chave)
+    Em 'Key users' selecione também seu usuário (esse poderá usar a chave em recursos AWS)
+    'Next' > 'Next' > 'Finish'
+
+# Note que apenas a CMK pode ser compartilhada com outra conta:
+    Navege em 'Customer Managed Key'
+    Selecione a sua chave, e veja que existe a opção 'Other AWS accounts', essa mesma opção não existe na chave aws/ebs (em 'AWS managed keys')
+
+# Agora a chave está criada, vamos criar uma instância com um volume EBS usando essa chave. Note que não conseguimos substituir a chave de um volume em uso.
+    Crie um nova instância, e nas configurações antes de cria-la selecione:
+    'Storage (volumes)' > 'EBS Volumes' > 'Advanced' > clique na seta 'volume 1...'
+    Em 'Encrypted' selecione 'Encrypted'
+    Em 'KMS key' selecione 'alunoX' (a chave CMK que você criou)
+
+# Caso você precise dar permissão a essa instância, ou qualquer snapshot/backup feito dela, você agora conseguirá compartilhar a CMK ou outras contas AWS.
+
+# Agora vamos criar um certificado ACM HTTPs para uso na criptografia em trânsito
+# Vamos usar o laboratório anterior, e criar um certificado SSL na nossa distribuição Cloudfront existente 
+    Navegue até o servico 'Certificate Manager' para acessar a console do ACM 
+    ATENÇÃO: Certifiquem-se de estar na região N.Virginia, o Cloudfront não funciona com o ACM em outra
+    Clique em 'Request certificate' > 'Request a public certificate' > 'Next'
+    Em 'Fully qualified domain name' coloque o dominio do seu site 'alunoX.daaula.com.br'
+
+# Para validar que somos realmente o dono desse dominio, vamo usar DNS
+    Em 'Validation method' selecione 'DNS validation - recommended'
+    Clique em 'Request'
+
+# Note que em 'Domains' > 'Status' vemos 'Pending validation', isso pois precisamos criar um entrada DNS para que o ACM valide que somos dono. 
+    Como usamos o Route53, basta clicar em 'Create Records in Route53' (veja que em sua zona no Route53 essa entrada foi criada)
+
+# Aguarde alguns minutos, até que o 'Status' do dominio esteja 'Success', isso pode demorar um pouco, até lá vamos configurar o nome DNS no próximo passo
+
+# Agora vamos criar um entrada DNS apontando nosso nome de dominio para nosso site: 
+    Navegue até o serviço 'Route53' 
+    Selecione seu dominio 'alunoX.daaula.com.br'
+    'Create Record'
+    'Record name' = deixe vazio, vamos usar o naked domain 
+    'Record type' = A (obrigatório para naked domain)
+    Selecione a opção 'Alias'
+    'Route traffic to'= 'Alias to Cloudfront Distribution'
+    'An alias to a CloudFront distribution and anoth....' = coloque o 'Domain name' de sua distribuição criada na outra aula
+    Por fim 'Create records'
+
+# Valide se seu certificado no ACM já está com status 'Sucess', se estiver, vamos para o Cloudfront, e clique na sua distribuição
+    Na aba 'General' > 'Settings' clique em 'Edit'
+    'Alternate domain name (CNAME) - optional' = alunoX.daaula.com.br
+    Em 'Custom SSL certificate - optional'
+    Selecione o seu certificado 'alunoX.daaula.com.br'
+
+# Agora vamos forçar que caso um usuário acesso o site com HTTP, ele receba um 301 (redirect) para o site HTTPS
+    Em sua distribuição, navegue até 'Behavior'
+    Selecione o 'Behavior' com 'Precedence'=0
+    E selecione 'Redirect HTTP to HTTPS'
+
+# Como sua EC2 foi desligada, vamos atualizar o IP Publico da instância na origem da distribuição Cloudfront 
+    Abra uma nova aba do browser, navegue até EC2 e ligue seu EC2 (que roda nosso site)
+    Copie o 'Public IPv4 DNS'
+    Volte ao Serviço Cloudfront e selecione sua distribuição
+    'Origins' > Selecione sua origem > 'Edit'
+    Em 'Origin domain' cole o domain 'Public IPv4 DNS' > 'Save Changes'
+
+# Agora vamos testar, navegue no browser no seu site 'http://alunoX.daaula.com.br'
+# O site deve ter sido redirecionado para httpS://....
+# Note que o cadeado do browser está ligado, clique nele e busque as informações do certificado
+# Lá você deve ver os dados de seu dominio, e a CA (Certificate Authority) com Amazon
+
+# Logue no servidor EC2, instale o curl e faça os testes via curl, veja o redirect
+    % curl -I http://aluno10.daaula.com.br/ 
+    HTTP/1.1 301 Moved Permanently
+    Server: CloudFront
+    Date: Fri, 25 Apr 2025 03:39:20 GMT
+    Content-Type: text/html
+    Content-Length: 167
+    Connection: keep-alive
+    Location: https://aluno10.daaula.com.br/
+    X-Cache: Redirect from cloudfront
+    Via: 1.1 632fca25fb23eb290b1185f0792b2a5e.cloudfront.net (CloudFront)
+    X-Amz-Cf-Pop: GRU3-P1
+    X-Amz-Cf-Id: xrayo2orWPfa0hgVeIe91KGkZA3626O9UTVZEw0YbN-DCxhdrmHWkA==
+
+# Agora vamos acessar com HTTPS 
+% curl -I https://aluno10.daaula.com.br/
+HTTP/2 405 
+server: CloudFront
+date: Fri, 25 Apr 2025 03:40:07 GMT
+content-length: 2503
+x-amzn-waf-action: captcha
+cache-control: no-store, max-age=0
+content-type: text/html; charset=UTF-8
+access-control-allow-origin: *
+access-control-max-age: 86400
+access-control-allow-methods: OPTIONS,GET,POST
+access-control-allow-headers: x-amzn-waf-action
+x-cache: Error from cloudfront
+via: 1.1 e40594d191a88dc4bce1cbdfa1173f2a.cloudfront.net (CloudFront)
+x-amz-cf-pop: GRU3-P1
+x-amz-cf-id: GNFrqCV1D8PAbaujNzb4Uqwv1V36i_xKOn_rqGSn8FoxmdSBTRARAw==
+
