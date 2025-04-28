@@ -1,0 +1,72 @@
+# Nessa aula faremos dois exercicios
+
+1) Vamos aprender accesar instâncias via Session Manager (console web) do SSM (System Manager)
+2) Criaremos uma regra de AWS Config para validar que uma tag está devidamente configurada em uma recurso AWS (EC2)
+
+# Primeiro vamos nos certificar que existe um role configurado com permissão para o SSM 
+
+    Navegue em IAM > Roles > Create role
+    Selecione "AWS service"
+    Em "Use case" selecione "EC2" e clique em "Next" 
+    #Isso usar uma policy que dá acesso ao EC2 acessar o SSM. Você poderia criar a role manualmente, funcionaria também. 
+    Marque "EC2 Role for AWS Systems Manager".
+    Clique no sinal de + e note que a role usou uma AWS Managed Policy chamanda "AmazonSSMManagedInstanceCore", que contêm apenas acesso ao SSM  
+    Clique em next, depois coloque o nome "role-ec2-alunoX", onde X é seu número de aluno 
+    Agora "Create role"
+
+# Agora vamos associar essa role a uma uma instância sua. Você poderá usar as dos laboratórios anteriores, ou criar uma (veja aula2.txt)
+
+# Para associar basta abrir o serviço "EC2": 
+    Selecione sua instância 
+    Clique no botão "Actions" > "Security" > "Modify IAM role"
+    Selecione sua role, e clique em "Update IAM role"
+    Confirme que sua instância está ligada 
+# Note que apenas uma role pode ser associado a uma instância EC2, por isso, caso precise dar mais permissões (como s3, sqs e outros), você deverá adicionar policies nessa mesma role.
+
+
+# Agora vamos acessar a console (terminal) da instância via SSH. 
+    Selecione a instância 
+    Clique no botão "Connect"
+    E "Connect" novamente. Caso não esteja habilitado o botão, valide se fez todos os passos. Pode demorar um pouco até o servico do SSM (instalado no EC2) subir. 
+
+# Excelente, agora você não precisa mais de putty, ou outro terminal qualquer para acessar uma instância
+
+----
+
+# Agora vamos testar o AWS Config, para isso vamos criar um regra (rule), que valida se uma boa prática está ou não compliance 
+
+    Acesse o servico "AWS Config"
+    "AWS Config" > "Rules" > "Add rule"
+    No filtro procure pela regra "required-tags" e selecione-a 
+    Clique em "Next"
+    Em "Name" coloque required-tags-alunoX
+    Em "Parameters", remova todos e deixe apenas dois 
+    tag1Key = alunoX (onde X é seu número de aluno)
+    tag1Value = yes, no (respeite o espaço)
+    tag2Key = Team
+    tag2Value = infra, db, dev
+    Clique em "Next", depois "Save"
+
+# Agora vamos procurar sua regra, navegue em "Rules" e procure sua regra (navegue nas páginas)
+
+# Veja que diversos recursos devem estar fora de compliance, com seus EC2
+
+# Para testar a regra, coloque em seu EC2, as seguintes TAGs 
+    alunoX = yes
+    Team = infra
+
+# Aguarde alguns minutos e veja o que aconteceu
+
+# Agora mude o valor da TAG Team para "desenvolvedores".
+
+# Aguarde alguns minutos e diga e observe o que aconteceu.
+
+# A avaliação deve demorar, para acelerar o processo, você pode entrar na regra e tentar clicar em "Action" > "Re-evaluate"
+
+# Enquanto a regra não abre, veja como o "AWS Config" te ajuda na gestão do ambiente. 
+    Clique em "Resource"
+    Em "Resource type" filtre por "AWS S3 Bucket"
+    Selecione o bucket "fiap-sec-nao-apagar"
+    Clique em "Resource Timeline"
+    Note como é possível observar todas as mudanças no recurso ao longo do tempo
+
