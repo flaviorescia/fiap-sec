@@ -1,0 +1,69 @@
+# Vamos criar um VPC Flow log, em um escopo limitado (um EC2) para monitorarmos trafego de rede que está sendo liberado e bloqueado 
+
+# Primeiro vamos criar uma role com as permissões necessárias
+    Navegue em "IAM" > "Roles" > "Create Role"
+    Selecione a opção "Custom trust policy"
+    Cole a JSON abaixo: 
+        {
+	        "Version": "2012-10-17",
+	        "Statement": [
+		    {
+			"Sid": "Statement1",
+			"Effect": "Allow",
+            "Principal": {
+                "Service": "vpc-flow-logs.amazonaws.com"
+            },
+			"Action": "sts:AssumeRole"
+		    }
+	        ]
+        } 
+    Em "Policy Name", selecione a policy "CloudWatchLogsFullAccess" (isso não é recomendado em ambiente produtivo)
+    Clique em "Next"
+    Em nome escolha alunoX-role-vpc-flow (onde X é o seu número de aluno)
+    Clique em "Create Role"
+
+# Habilite o VPC Flow Logs na ENI de seu EC2
+    Escolha uma instância EC2 ligada (pode ser a sua criado em outros laboratórios)
+    Abra o serviço "EC2" e selecione o menu "Instaces"
+    Clique na sua instância
+    Aba "Networking"
+    Copie o "Public IP" da instância e salve no bloco de notas (para testarmos depois)
+    Clique na ENI na sessão "Interface ID"
+    Em "Flow Log", clique em "Create flow log"
+    Use as opções abaixo:
+        "Name - optional" = alunoX-vpc-flow
+        "Destination log group" = alunoX-role-vpc-flow
+        "IAM role" = alunoX-role-vpc-flow
+    Clique em "Create flow"
+
+# Agora vamos analizar os logs 
+
+# Primeiro faça um teste de ping no IP Público da instância 
+    Faça um teste de ping na instância no seu prompt de comandos (não deve funcionar)
+    Abra o serviço "CloudWatch"
+    Abra a aba "Logs" > "Log groups"
+    Localize seu Log Group e clique nele 
+    Em "Log streams" selecione sua ENI 
+    No filtro coloque "0 0" (com as aspas)
+
+# O que você viu? 
+
+# Agora vamos liberar o ICMP e fazer o teste novamente: 
+    Em outra Aba, volte no seu EC2
+    Na aba "Security" selecione o "Security Group"
+    Clique em "Edit inbound rules"
+    Clique em "Add rule" e selecione o Type "All ICMP - ipv4", e em "Source" adicione 0.0.0.0/0
+    Salve clicando em "Save Rules"
+    Faça novamente o teste de Ping (que deve funcionar)
+    Agora volte do Cloudwatch, clique no botão de refresh.
+
+# O que você viu? 
+
+# Você deve localizar os pacotes ICMP, agora nas duas direções (para o EC2, e do EC2 voltando para seu computador)
+
+
+
+
+
+
+
