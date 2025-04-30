@@ -4,19 +4,20 @@
     Navegue em "IAM" > "Roles" > "Create Role"
     Selecione a opção "Custom trust policy"
     Cole a JSON abaixo: 
+{
+    "Version": "2012-10-17",
+    "Statement": [
         {
-	        "Version": "2012-10-17",
-	        "Statement": [
-		    {
-			"Sid": "Statement1",
-			"Effect": "Allow",
-            "Principal": {
-                "Service": "vpc-flow-logs.amazonaws.com"
-            },
-			"Action": "sts:AssumeRole"
-		    }
-	        ]
-        } 
+            "Sid": "CloudWatchLogsFullAccess",
+            "Effect": "Allow",
+            "Action": [
+                "logs:*",
+                "cloudwatch:GenerateQuery"
+            ],
+            "Resource": "*"
+        }
+    ]
+}
     Em "Policy Name", selecione a policy "CloudWatchLogsFullAccess" (isso não é recomendado em ambiente produtivo)
     Clique em "Next"
     Em nome escolha alunoX-role-vpc-flow (onde X é o seu número de aluno)
@@ -60,6 +61,52 @@
 # O que você viu? 
 
 # Você deve localizar os pacotes ICMP, agora nas duas direções (para o EC2, e do EC2 voltando para seu computador)
+
+-----
+# Agora vamos criar uma credencial via ParameterStore e via SecretManager, e recupera-la via AWS CLI
+
+# Vamos configurar a iam-role de nosso EC2 (criado na aula passada), para permitir o 
+    Abra o serviço "IAM" > "IAM Role"
+    Selecione sua role (role-ec2-alunoX)
+    Em "Permissions policies" clique em "Add policy" > "Attach Policy"
+    Selecione a policy "AmazonSSMReadOnlyAccess" e "SecretsManagerReadWrite" (para ambientes reais, crie uma policy mais restritiva)
+    Clique em "Add permissions"
+
+# Criando Parameter Store 
+    Abra o serviço "AWS System Manager" e "Parameter Store" 
+    Agora clique em "Create Parameter"
+    Preencha com os dados abaixo: 
+        Name = alunoX 
+        Type = SecureString
+        Value = 12qwaszx
+    Clique em "Create Parameter"
+
+# Agora logue na console da sua instância (que tem a role aplicada)
+    O comando abaixo irá recuperar o parametro:
+        aws ssm get-parameter --name alunoX
+    Caso queira ver a credencial em texto puro: 
+        aws ssm get-parameter --name alunoX --with-decryption
+
+# Criando Segredo no SecretManager 
+    Abra o serviço "SecretManager" > "Store a new secret"
+    Selecione "Other type of secret"
+    Selecione "Key/Value"
+        Key = aluno11
+        Valeu = 12qwaszx 
+    Clique em "Next"
+    Em "Secret name" = aluno11
+    "Next" > "Next" > "Store"
+
+# Abra a console da instância para recuperarmos o segredo: 
+    Rode o comando abaixo para listar os segredos: 
+        aws secretsmanager list-secrets
+    Pegue o ID do seu segredo e vamos recupera-lo  
+        aws secretsmanager get-secret-value --secret-id "arn:aws:secretsmanager:us-ea..."
+
+
+
+
+
 
 
 
